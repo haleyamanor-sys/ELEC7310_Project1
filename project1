@@ -1,0 +1,28 @@
+%Constants and geometry assumptions
+esp0 = 8.8542; % F/m
+E0 = 100; %V/m
+plateSide = 20e-3; %m 
+plateGap = 2e-3; %m 
+shutterwidth = 20e-3; %m
+d = 2e-3; %m 
+baseTopY = 2e-3; %mm
+senseY = 4e-3; %m 
+shutterY = senseY+d; %m
+plateDepth = plateSide; %m
+shutterVelocity = 20e-3; %m/s
+Rf = 100e6; %ohm
+
+%Grid/array Setup
+Lx = 80e-3; 
+Ly = 40e-3; 
+h = 0.25e-3; %dx = dy = h
+Nx = round(Lx/h)+1; 
+Ny = round(Ly/h)+1; 
+x = (0:Nx-1)*h; 
+y = (0:Ny-1)*h; 
+Lx = x(end); 
+Ly = y(end); 
+dx = x(2)-x(1); 
+dy = y(2)-y(1); 
+assert(abs(dx-dy) < 100*esp(max(dx,dy)), 'Grid must satisfy dx = dy.');
+[X,Y] = meshgrid(x,y); 
