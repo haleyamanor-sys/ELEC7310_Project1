@@ -26,3 +26,61 @@ dx = x(2)-x(1);
 dy = y(2)-y(1); 
 assert(abs(dx-dy) < 100*esp(max(dx,dy)), 'Grid must satisfy dx = dy.');
 [X,Y] = meshgrid(x,y); 
+
+%Add Conductors
+xc = Lx/2;
+plate1Right = xc-plateGap/2; 
+plate1Left = plate1Right-plateSide;
+plate2Left = xc+plateGap/2;  
+plate2Right = plate2Left+plateSide;
+[~,baseRow] = min(abs(y-baseTopY));
+[~,senseRow] = min(abs(y-senseY));
+[~,shutterRow] = min(abs(y-shutterY));
+p1 = x>=plate1Left & x<=plate1Right;
+p2 = x>=plate2Left & x<=plate2Right;
+shutterCenters = linspace((plate1Left+plate1Right)/2, ...
+    (plate2Left+plate2Right)/2,41);
+time = (shutterCenters-shutterCenters(1))/shutterVelocity;
+Npos = numel(shutterCenters);
+ 
+%Laplace Solver
+maxIter = 50000; tol = 1e-7;
+Q1=zeros(1,Npos); Q2=Q1; Q1ana=Q1; Q2ana=Q1;
+iters=Q1; finalChange=Q1; maxResidual=Q1; conductorError=Q1;
+saveIdx=[1 round((Npos+1)/2) Npos];
+VnumSave=cell(1,3); VanaSave=cell(1,3); errVSave=cell(1,3);
+ExSave=cell(1,3); EySave=cell(1,3); shBounds=zeros(3,2);
+ 
+%Shutter Sweep
+for k=1:Npos
+    shC=shutterCenters(k); shL=shC-shutterWidth/2; shR=shC+shutterWidth/2;
+    sh = x>=shL & x<=shR;
+    V = E0*Y;  % initial guess
+
+    fixed=false(Ny,Nx); fixedValue=zeros(Ny,Nx);
+    fixed(1:baseRow,:)=true;                       % grounded base
+    fixed(senseRow,p1)=true; fixed(senseRow,p2)=true; % virtual grounds
+    fixed(shutterRow,sh)=true;                     % grounded shutter
+    fixed(end,:)=true; fixedValue(end,:)=E0*Ly;   % applied far field
+    V(fixed)=fixedValue(fixed);
+
+    %Numerical Laplace Solution
+    for n=1:maxIter
+        Vold=V; Vnew=Vold;
+        avg4=0.25*(Vold(3:end,2:end-1)+Vold(1:end-2,2:end-1)+ ...
+            Vold(2:end-1,3:end)+Vold(2:end-1,1:end-2));
+        fInterior=fixed(2:end-1,2:end-1);
+        block=Vnew(2:end-1,2:end-1);
+        block(~fInterior)=avg4(~fInterior);
+        Vnew(2:end-1,2:end-1)=block;
+        Vnew(2:end-1,1)=Vnew(2:end-1,2);           % dV/dx=0
+        Vnew(2:end-1,end)=Vnew(2:end-1,end-1);     % dV/dx=0
+        Vnew(fixed)=fixedValue(fixed);
+        change=max(abs(Vnew(:)-Vold(:)));
+        V=Vnew;
+        if change<tol, break; end
+    end
+ 
+Vnumerical=V;
+iters(k)=n; finalChange(k)=change;
+
