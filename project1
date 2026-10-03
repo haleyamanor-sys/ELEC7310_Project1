@@ -84,3 +84,60 @@ for k=1:Npos
 Vnumerical=V;
 iters(k)=n; finalChange(k)=change;
 
+%Verify Laplace Equation
+    lap=zeros(Ny,Nx);
+    lap(2:end-1,2:end-1)=(Vnumerical(3:end,2:end-1)+ ...
+        Vnumerical(1:end-2,2:end-1)+Vnumerical(2:end-1,3:end)+ ...
+        Vnumerical(2:end-1,1:end-2)-4*Vnumerical(2:end-1,2:end-1))/h^2;
+    free=false(Ny,Nx); free(2:end-1,2:end-1)=~fixed(2:end-1,2:end-1);
+    maxResidual(k)=max(abs(lap(free)));
+    conductorError(k)=max(abs(Vnumerical(fixed)-fixedValue(fixed)));
+ 
+%Numerical electric field and charge
+    [dVdx,dVdy]=gradient(Vnumerical,h,h);
+    Ex=-dVdx; Ey=-dVdy;
+    Ey1=-(Vnumerical(senseRow+1,p1)-Vnumerical(senseRow,p1))/h;
+    Ey2=-(Vnumerical(senseRow+1,p2)-Vnumerical(senseRow,p2))/h;
+    Q1(k)=sum(eps0*Ey1)*h*plateDepth;
+    Q2(k)=sum(eps0*Ey2)*h*plateDepth;
+ 
+%Analytical charge solution
+    covered1=max(0,min(plate1Right,shR)-max(plate1Left,shL));
+    covered2=max(0,min(plate2Right,shR)-max(plate2Left,shL));
+    Aexp1=(plateSide-covered1)*plateDepth;
+    Aexp2=(plateSide-covered2)*plateDepth;
+    Q1ana(k)=-eps0*E0*Aexp1; Q2ana(k)=-eps0*E0*Aexp2;
+
+%Mapped potential to grid
+    Vanalytical=zeros(Ny,Nx);
+    for j=1:Nx
+        if sh(j)
+            above=y>shutterY;
+            Vanalytical(above,j)=E0*(y(above)-shutterY);
+        else
+            above=y>senseY;
+            Vanalytical(above,j)=E0*(y(above)-senseY);
+        end
+    end
+    Vanalytical(fixed)=fixedValue(fixed);
+
+%Spatial error maps
+    errV=abs(Vnumerical-Vanalytical); errV(fixed)=NaN;
+        m=find(saveIdx==k,1);
+        if ~isempty(m)
+            VnumSave{m}=Vnumerical; VanaSave{m}=Vanalytical; errVSave{m}=errV;
+            ExSave{m}=Ex; EySave{m}=Ey; shBounds(m,:)=[shL shR];
+        end
+end
+
+%Numerical and analytical dQ/dT
+Qdiff=Q1-Q2;
+QdiffAna=Q1ana-Q2ana;
+I1=gradient(Q1,time); 
+I2=gradient(Q2,time); 
+Idiff=gradient(Qdiff,time);
+I1ana=gradient(Q1ana,time); 
+I2ana=gradient(Q2ana,time);
+IdiffAna=gradient(QdiffAna,time);
+VoutNumerical=-Rf*Idiff; 
+VoutAnalytical=-Rf*IdiffAna;
