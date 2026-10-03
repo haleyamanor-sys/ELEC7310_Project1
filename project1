@@ -188,3 +188,34 @@ colorbar; title('Globally Normalized Potential Error (%)'); axis equal tight;
 figure('Color','w'); contourf(x*1e3,y*1e3,errE,40,'LineColor','none');
 colorbar; title('Electric-Field Magnitude Error (V/m)'); axis equal tight;
 
+%Charge, current, and amplifier comparisons
+figure('Color','w');
+plot(time,Qdiff*1e12,'b-',time,QdiffAna*1e12,'r--','LineWidth',1.8);
+grid on; xlabel('Time (s)'); ylabel('Differential charge (pC)');
+legend('Numerical','Analytical');
+figure('Color','w');
+plot(time,Idiff*1e12,'b-',time,IdiffAna*1e12,'r--','LineWidth',1.8);
+grid on; xlabel('Time (s)'); ylabel('Differential current (pA)');
+legend('Numerical','Analytical');
+figure('Color','w');
+plot(time,VoutNumerical*1e3,'b-',time,VoutAnalytical*1e3,'r--','LineWidth',1.8);
+grid on; xlabel('Time (s)'); ylabel('Output voltage (mV)');
+legend('Numerical','Analytical');
+
+%Final plots
+figure('Color','w'); plot(shutterCenters*1e3,iters,'ko-'); grid on;
+xlabel('Shutter center (mm)'); ylabel('Jacobi iterations');
+if ~exist('project_figures','dir'), mkdir('project_figures'); end
+fh=findall(groot,'Type','figure');
+for m=1:numel(fh)
+    exportgraphics(fh(m),fullfile('project_figures', ...
+        sprintf('figure_%02d.png',fh(m).Number)),'Resolution',300);
+end
+
+function drawGeom(p1L,p1R,p2L,p2R,sY,shL,shR,shY,Lx,bY)
+plot([p1L p1R]*1e3,[sY sY]*1e3,'k-','LineWidth',5);
+plot([p2L p2R]*1e3,[sY sY]*1e3,'k-','LineWidth',5);
+plot([shL shR]*1e3,[shY shY]*1e3,'r-','LineWidth',5);
+plot([0 Lx]*1e3,[bY bY]*1e3,'k-','LineWidth',5);
+end
+
